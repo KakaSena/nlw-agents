@@ -1,5 +1,4 @@
 import { fastify } from "fastify";
-import { sql } from "./db/connection.ts";
 import {
   serializerCompiler,
   validatorCompiler,
@@ -7,6 +6,7 @@ import {
 } from "fastify-type-provider-zod";
 import { fastifyCors } from "@fastify/cors";
 import { env } from "./env.ts";
+import { getRoomRoute } from "./http/routes/get-rooms.ts";
 
 const app = fastify();
 app.register(fastifyCors, { origin: "http://localhost:5173" });
@@ -17,5 +17,7 @@ app.setValidatorCompiler(validatorCompiler);
 app.get("/health", () => {
   return "OK";
 });
+
+app.register(getRoomRoute)
 
 app.listen({ port: env.PORT })
