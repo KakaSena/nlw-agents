@@ -1,4 +1,5 @@
 import { fastify } from "fastify";
+import {fastifyMultipart} from "@fastify/multipart"
 import {
   serializerCompiler,
   validatorCompiler,
@@ -10,6 +11,7 @@ import { getRoomRoute } from "./http/routes/get-rooms.ts";
 import { createRoomRoute } from "./http/routes/create-room.ts";
 import { getRoomQuestions } from "./http/routes/get-room-questions.ts";
 import { createQuestionRoute } from "./http/routes/create-question.ts";
+import { uploadAudioRoute } from "./http/routes/upload-audio.ts";
 
 const app = fastify();
 app.register(fastifyCors, { origin: "http://localhost:5173" });
@@ -21,9 +23,12 @@ app.get("/health", () => {
   return "OK";
 });
 
+app.register(fastifyMultipart)
+
 app.register(getRoomRoute)
 app.register(createRoomRoute)
 app.register(getRoomQuestions)
 app.register(createQuestionRoute)
+app.register(uploadAudioRoute)
 
 app.listen({ port: env.PORT })
