@@ -84,4 +84,8 @@ Make sure **both** `server` and `web` are running at the same time for full func
 
 ---
 
+## 👨‍💻 Author
+
+Developed by [@KakaSena](https://github.com/KakaSena) during **NLW** by Rocketseat 💜
+
 
