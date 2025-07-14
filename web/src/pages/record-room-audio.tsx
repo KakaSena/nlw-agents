@@ -1,6 +1,6 @@
-import { Button } from "@/components/ui/button";
 import { useRef, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 const isRecordingSupported =
   !!navigator.mediaDevices &&
@@ -13,15 +13,69 @@ type RoomParams = {
 
 export function RecordRoomAudio() {
   const params = useParams<RoomParams>();
-
   const [isRecording, setIsRecording] = useState(false);
   const recorder = useRef<MediaRecorder | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout>(null);
 
-  async function handleRecording() {
+  function handleStopRecording() {
+    setIsRecording(false);
+
+    if (recorder.current && recorder.current.state !== "inactive") {
+      recorder.current.stop();
+    }
+
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+  }
+
+  async function uploadAudio(audio: Blob) {
+    const formData = new FormData();
+
+    formData.append("file", audio, "audio.webm");
+
+    const response = await fetch(
+      `http://localhost:3333/rooms/${params.roomId}/audio`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    const result = await response.json();
+
+    console.log(result);
+  }
+
+  function createRecorder(audio: MediaStream) {
+    recorder.current = new MediaRecorder(audio, {
+      mimeType: "audio/webm",
+      audioBitsPerSecond: 64_000,
+    });
+
+    recorder.current.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        uploadAudio(event.data);
+      }
+    };
+
+    recorder.current.onstart = () => {
+      console.log("Recording started!");
+    };
+
+    recorder.current.onstop = () => {
+      console.log("Recording stopped/paused");
+    };
+
+    recorder.current.start();
+  }
+
+  async function handleStartRecording() {
     if (!isRecordingSupported) {
-      alert("Your Browser does not support recording.");
+      alert("Your browser does not support recording");
       return;
     }
+
     setIsRecording(true);
 
     const audio = await navigator.mediaDevices.getUserMedia({
@@ -32,48 +86,13 @@ export function RecordRoomAudio() {
       },
     });
 
-    recorder.current = new MediaRecorder(audio, {
-      mimeType: "audio/webm",
-      audioBitsPerSecond: 64_000,
-    });
+    createRecorder(audio);
 
-    recorder.current.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        handleUploadAudio(event.data);
-      }
-    };
+    intervalRef.current = setInterval(() => {
+      recorder.current?.stop();
 
-    recorder.current.onstart = () => {
-      console.log("recording started");
-    };
-
-    recorder.current.onstop = () => {
-      console.log("recording finished");
-    };
-
-    recorder.current.start();
-  }
-
-  function handleStopRecording() {
-    setIsRecording(false);
-    if (recorder.current && recorder.current.state !== "inactive") {
-      recorder.current.stop();
-    }
-  }
-
-  async function handleUploadAudio(audio: Blob) {
-    const formData = new FormData();
-
-    formData.append("file", audio, "audio.webm");
-
-    const response = await fetch(
-      `http://localhost:3333/rooms/${params.roomId}/audio`,
-      { method: "POST", body: formData }
-    );
-
-    const result = await response.json();
-
-    console.log(result);
+      createRecorder(audio);
+    }, 5000);
   }
 
   if (!params.roomId) {
@@ -85,7 +104,7 @@ export function RecordRoomAudio() {
       {isRecording ? (
         <Button onClick={handleStopRecording}>Stop Recording</Button>
       ) : (
-        <Button onClick={handleRecording}>Record Audio</Button>
+        <Button onClick={handleStartRecording}>Record Audio</Button>
       )}
       {isRecording ? <p>Recording...</p> : <p>Paused</p>}
     </div>
